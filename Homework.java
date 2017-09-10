@@ -30,9 +30,9 @@ public class Homework {
 	private final String outputfileName="output.txt";
 
 	private  String algoType;
-	private  int matrixSize, lizards,matrix[],DFSMatrix[];
+	private  int matrixSize, lizards, DFSlizardPlaced,matrix[],DFSMatrix[];
 	
-
+	private Set<Integer> result, DFSlizardLoc = new HashSet<Integer>();
 
 	public static void main(String[] args) throws Exception{
 		// TODO Auto-generated method stub
@@ -63,7 +63,7 @@ public class Homework {
 		}
 		br.close();
 		DFSMatrix = matrix.clone();
-		tempMatrix=runDFS(new Node(new HashSet<Integer>(),0,0));
+		tempMatrix=runDFS(0);
 		writeFile(tempMatrix!=null, tempMatrix);
 	}
 	private void writeFile(boolean result, Set<Integer> lizardLoc) throws IOException {
@@ -96,7 +96,7 @@ public class Homework {
 				locUpdated.add(j);
 			}
 					
-
+		//vertical bottom
 		for(int j= (int)index+matrixSize;j<matrix.length;j+=matrixSize)
 			if(matrix[j]==2)break;
 			else if(matrix[j]==0) {
@@ -123,48 +123,22 @@ public class Homework {
 		}
 		return locUpdated;
 	}
-
-	private boolean isSafe(Set<Integer> lizardLoc, int index) {
-		//left side of position
-		if(matrix[index]==2)return false;
-		double row = (index/matrixSize)*matrixSize;	
-		for(int i = (int)index-1;row<=i;i--)
-			if(lizardLoc.contains(i))return false;
-			else if(matrix[i]==2)break;
-
-		//top of position
-		for(int i= (int)index-matrixSize;0<=i;i-=matrixSize)
-			if(lizardLoc.contains(i))return false;
-			else if(matrix[i]==2)break;
-
-		//left top of position
-		for(int x = (int)(index%matrixSize)-1, y=(int)(index/matrixSize)-1;0<=x && 0<=y;x--,y--)
-			if(lizardLoc.contains(x+y*matrixSize))return false;
-			else if(matrix[x+y*matrixSize]==2)break;
-
-		//right top of position
-		for(int x = (int)(index%matrixSize)+1, y=(int)(index/matrixSize)-1;x<matrixSize && 0<=y;x++,y--)
-			if(lizardLoc.contains(x+y*matrixSize))return false;
-			else if(matrix[x+y*matrixSize]==2)break;
 		
-		return true;
-	}
-
-	private Set<Integer> runDFS(Node node) {		
-		Set<Integer> result, lizardLoc=node.lizardLoc;
+	private Set<Integer> runDFS(int startIndex) {
 		List<Integer>locUpdated=null;		
-		for(int i = node.index,index=0;i<matrix.length;i++) {
+		for(int i = startIndex,index=0;i<matrix.length;i++) {
 			if(DFSMatrix[i]==0) {
-				lizardLoc.add(i);
-				if((node.lizardPlaced+1)== lizards) {
-					return lizardLoc;
+				DFSlizardLoc.add(i);DFSlizardPlaced++;
+				if(DFSlizardPlaced== lizards) {
+					return DFSlizardLoc;
 				}
-				index = treeLoc.containsKey(i/matrixSize)?i+1:(int)Math.ceil(((float)i+1)/matrixSize)*matrixSize;
+				index = treeLoc.containsKey(i/matrixSize)?i+1:((i/matrixSize)+1)*matrixSize;
 				locUpdated = invalidPlaces(DFSMatrix, i);
-				result = runDFS(new Node(lizardLoc,node.lizardPlaced+1,index));
-				for(Integer pos:locUpdated)DFSMatrix[pos]=0;
+				result = runDFS(index);
+				for(Integer pos:locUpdated)DFSMatrix[pos.intValue()]=0;
 				if(result!=null)return result;
-				lizardLoc.remove(i);
+				DFSlizardPlaced--;
+				DFSlizardLoc.remove(i);
 			}
 		}
 		return null;
@@ -244,6 +218,33 @@ public class Homework {
 			}
 		}	
 		return null;
+	}*/
+	
+	
+/*	private boolean isSafe(Set<Integer> lizardLoc, int index) {
+		//left side of position
+		if(matrix[index]==2)return false;
+		double row = (index/matrixSize)*matrixSize;	
+		for(int i = (int)index-1;row<=i;i--)
+			if(lizardLoc.contains(i))return false;
+			else if(matrix[i]==2)break;
+
+		//top of position
+		for(int i= (int)index-matrixSize;0<=i;i-=matrixSize)
+			if(lizardLoc.contains(i))return false;
+			else if(matrix[i]==2)break;
+
+		//left top of position
+		for(int x = (int)(index%matrixSize)-1, y=(int)(index/matrixSize)-1;0<=x && 0<=y;x--,y--)
+			if(lizardLoc.contains(x+y*matrixSize))return false;
+			else if(matrix[x+y*matrixSize]==2)break;
+
+		//right top of position
+		for(int x = (int)(index%matrixSize)+1, y=(int)(index/matrixSize)-1;x<matrixSize && 0<=y;x++,y--)
+			if(lizardLoc.contains(x+y*matrixSize))return false;
+			else if(matrix[x+y*matrixSize]==2)break;
+		
+		return true;
 	}*/
 
 }
