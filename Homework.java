@@ -3,8 +3,10 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -16,7 +18,7 @@ import java.util.Set;
 
 public class Homework {
 	class Node{
-		int lizardPlaced,index;//, lizardPosition[];
+		int lizardPlaced,index;
 		private Set<Integer> lizardLoc = null;
 		Node(Set<Integer> lizardLoc, int lizardPlaced, int index){
 			this.lizardPlaced=lizardPlaced;
@@ -26,7 +28,7 @@ public class Homework {
 	}
 	
 	Map<Integer,List<Integer>> treeLoc = new HashMap<Integer,List<Integer>>();
-	private final String inputfileName="input7.txt";
+	private final String inputfileName="input18.txt";
 	private final String outputfileName="output.txt";
 
 	private  String algoType;
@@ -36,8 +38,10 @@ public class Homework {
 
 	public static void main(String[] args) throws Exception{
 		// TODO Auto-generated method stub
+		System.out.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()));
 		Homework hw = new Homework();
 		hw.init();			
+		System.out.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()));
 	}
 
 	private void init() throws Exception{
@@ -64,6 +68,7 @@ public class Homework {
 		br.close();
 		DFSMatrix = matrix.clone();
 		tempMatrix=runDFS(0);
+		//tempMatrix=runBFS(new Node(new HashSet<Integer>(),0,0));
 		writeFile(tempMatrix!=null, tempMatrix);
 	}
 	private void writeFile(boolean result, Set<Integer> lizardLoc) throws IOException {
@@ -85,31 +90,32 @@ public class Homework {
 		bw.close();
 	}
 
-		private List<Integer> invalidPlaces(int[] matrix, double index) {
+		private int[] invalidPlaces(int[] matrix, int index) {
+		int row, locUpdated[], count=0;
+		row = ((index/matrixSize)+1)*matrixSize;
+		locUpdated = new int[row-index+ 3*(matrixSize - (index/matrixSize))];
 		//horizontal right
-		List<Integer> locUpdated= new ArrayList<Integer>();
-		double row = Math.ceil((index+1)/matrixSize)*matrixSize;		
 		for(int j = (int)index+1;j<row;j++)
 			if(matrix[j]==2)break;
 			else if(matrix[j]==0) {
 				matrix[j]=-1;
-				locUpdated.add(j);
+				locUpdated[count++]=j;
 			}
 					
 		//vertical bottom
 		for(int j= (int)index+matrixSize;j<matrix.length;j+=matrixSize)
 			if(matrix[j]==2)break;
 			else if(matrix[j]==0) {
-				matrix[j]=-1;
-				locUpdated.add(j);
+				matrix[j]=-1;				
+				locUpdated[count++]=j;
 			}	
 
 		for(int x = (int)(index%matrixSize)+1, y=(int)(index/matrixSize)+1,pos=0;x<matrixSize && y<matrixSize;x++,y++) {
 			pos=y*matrixSize+x;
 			if(matrix[pos]==2)break;
 			else if(matrix[pos]==0) {
-				matrix[pos]=-1;
-				locUpdated.add(pos);
+				matrix[pos]=-1;				
+				locUpdated[count++]=pos;
 			}
 		}
 
@@ -117,25 +123,25 @@ public class Homework {
 			pos = y*matrixSize+x;
 			if(matrix[pos]==2)break;
 			else if(matrix[pos]==0) {
-				matrix[pos]=-1;
-				locUpdated.add(pos);
+				matrix[pos]=-1;				
+				locUpdated[count++]=pos;
 			}
 		}
 		return locUpdated;
 	}
 		
 	private Set<Integer> runDFS(int startIndex) {
-		List<Integer>locUpdated=null;		
+		int[] locUpdated=null;		
 		for(int i = startIndex,index=0;i<matrix.length;i++) {
 			if(DFSMatrix[i]==0) {
-				DFSlizardLoc.add(i);DFSlizardPlaced++;
+				DFSlizardLoc.add(new Integer(i));DFSlizardPlaced++;
 				if(DFSlizardPlaced== lizards) {
 					return DFSlizardLoc;
 				}
 				index = treeLoc.containsKey(i/matrixSize)?i+1:((i/matrixSize)+1)*matrixSize;
 				locUpdated = invalidPlaces(DFSMatrix, i);
 				result = runDFS(index);
-				for(Integer pos:locUpdated)DFSMatrix[pos.intValue()]=0;
+				for(int pos:locUpdated)DFSMatrix[pos]=0;
 				if(result!=null)return result;
 				DFSlizardPlaced--;
 				DFSlizardLoc.remove(i);
@@ -151,9 +157,8 @@ public class Homework {
 		while(!queue.isEmpty()) {
 			node = queue.poll();
 			tempMatrix=matrix.clone();
-			for(Integer loc:node.lizardLoc)invalidPlaces(tempMatrix, loc);
-			rowEnd = (int)Math.ceil(((float)node.index+1)/matrixSize)*matrixSize;
-			for(int i=node.index;i<rowEnd && rowEnd<=matrix.length;i++) {
+			for(Integer loc:node.lizardLoc)invalidPlaces(tempMatrix, loc.intValue());			
+			for(int i=node.index;i<matrix.length;i++) {
 				if(tempMatrix[i]==0) {
 					node.lizardLoc.add(i);
 					if((node.lizardPlaced+1)== lizards) {
@@ -165,6 +170,7 @@ public class Homework {
 								queue.add(new Node(node.lizardLoc,node.lizardPlaced+1,loc));
 						}
 					}
+					rowEnd = ((i/matrixSize)+1)*matrixSize;
 					queue.add(new Node(node.lizardLoc,node.lizardPlaced+1,rowEnd));
 					node.lizardLoc.remove(i);
 				}
