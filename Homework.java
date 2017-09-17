@@ -26,7 +26,7 @@ public class Homework {
 	}
 	
 	Map<Integer,List<Integer>> treeLoc = new HashMap<Integer,List<Integer>>();
-	private final String inputfileName="input17.txt";
+	private final String inputfileName="input1.txt";
 	private final String outputfileName="output.txt";
 
 	private  String algoType;
@@ -64,10 +64,15 @@ public class Homework {
 			}
 		}
 		br.close();
-		DFSlizardLoc = new int[lizards];
-		DFSMatrix = matrix.clone();
-		tempMatrix=runDFS(0);
-		//tempMatrix=runBFS(new Node(new int[lizards],0,0));
+		if(algoType.equals("DFS")) {
+			DFSlizardLoc = new int[lizards];
+			DFSMatrix = matrix.clone();
+			tempMatrix=runDFS(0);
+		}else if(algoType.equals("BFS")) {
+			tempMatrix=runBFS(new Node(new int[lizards],0,0));
+		}else if(algoType.equals("SA")) {
+			tempMatrix=runSA();
+		}		
 		writeFile(tempMatrix!=null, tempMatrix);
 	}
 	private void writeFile(boolean result, int[] lizardLoc) throws IOException {
@@ -178,77 +183,146 @@ public class Homework {
 		return null;
 	}
 
-	/*if(isSafe(lizardLoc,i)) {
-	lizardLoc.add(i);
-	if((node.lizardPlaced+1)== lizards) {
-		return lizardLoc;
-	}
-	if(treeLoc.containsKey(i/matrixSize) && i<treeLoc.get(i/matrixSize)+(i/matrixSize)*matrixSize) {					
-		result = runDFS(new Node(lizardLoc,node.lizardPlaced+1,i+1));
-	}else 
-		result = runDFS(new Node(lizardLoc,node.lizardPlaced+1,(int)Math.ceil((float)(i+1)/matrixSize)*matrixSize));
-	if(result!=null)return result;
-	lizardLoc.remove(i);
-}*/
 	
-/*	private int[] runBFS(Node node) {		
-		int rowEnd,initialGrid[]=null;	
-		List<Integer> lizardLoc=null;
-		Queue<Node> queue = new LinkedList<Node>();
-		queue.add(node);
-		boolean rowHasTree=false;
-		while(!queue.isEmpty()) {			
-			node = queue.poll();
-			rowHasTree=false;
-			initialGrid=matrix.clone();
-			lizardLoc=node.lizardLoc;
-			for(Integer loc : lizardLoc) {
-				initialGrid[loc]=1;
-				invalidPlaces(initialGrid, loc);
-			}
-			rowEnd = (matrixSize*((node.index/matrixSize)+1));
-			for(int i = node.index;i<rowEnd && !rowHasTree;i++) rowHasTree = (initialGrid[i]==2);
-			for(int i = node.index;i<rowEnd && rowEnd<initialGrid.length;i++) {
-				if(initialGrid[i]==0) {
-					if((node.lizardPlaced+1)== lizards) {
-						initialGrid[i]=1;
-						return initialGrid;
-					}	
-					lizardLoc.add(i);
-					if(rowHasTree)queue.add(new Node(lizardLoc, node.lizardPlaced+1,i+1));	
-					queue.add(new Node(lizardLoc, node.lizardPlaced+1,rowEnd));					
-					lizardLoc.remove(lizardLoc.size()-1);
+	
+	//=========================================Simulated Annealing=================================
+	private int getConlicts(int[] randomMatrix,int index) {
+		int rowend , rowStart,count=0;
+		rowend = ((index/matrixSize)+1)*matrixSize;
+		rowStart=((index/matrixSize))*matrixSize;
+		//horizontal right
+		for(int j = (int)index+1;j<rowend;j++)
+			if(randomMatrix[j]==2)break;
+			else if(randomMatrix[j]==1) count++;
+		
+		//horizontal left
+		for(int j = (int)index-1;j>rowStart;j--)
+			if(randomMatrix[j]==2)break;
+			else if(randomMatrix[j]==1) count++;
+		
+		
+		//vertical bottom
+		for(int j= (int)index+matrixSize;j<matrix.length;j+=matrixSize)
+			if(randomMatrix[j]==2)break;
+			else if(randomMatrix[j]==1) count++;
+		
+		
+		//vertical up
+		for(int j= (int)index-matrixSize;0<=j;j-=matrixSize)
+			if(randomMatrix[j]==2)break;
+			else if(randomMatrix[j]==1) count++;
+		
+		//diagonal down right
+		for(int x = (int)(index%matrixSize)+1, y=(int)(index/matrixSize)+1,pos=0;x<matrixSize && y<matrixSize;x++,y++) {
+			pos=y*matrixSize+x;
+			if(randomMatrix[pos]==2)break;
+			else if(randomMatrix[pos]==1) count++;
+		}
+		
+		//diagonal up left
+		for(int x = (int)(index%matrixSize)-1, y=(int)(index/matrixSize)-1,pos=0;0<=x && 0<=y;x--,y--) {
+			pos=y*matrixSize+x;
+			if(randomMatrix[pos]==2)break;
+			else if(randomMatrix[pos]==1) count++;
+		}
+		
+		//diagonal up right
+		for(int x = (int)(index%matrixSize)+1, y=(int)(index/matrixSize)-1, pos=0;x<matrixSize && y>=0;x++,y--) {
+			pos = y*matrixSize+x;
+			if(randomMatrix[pos]==2)break;
+			else if(randomMatrix[pos]==1) count++;
+		}
+		
+		//diagonal down left
+		for(int x = (int)(index%matrixSize)-1, y=(int)(index/matrixSize)+1, pos=0;x>=0 && y<matrixSize;x--,y++) {
+			pos = y*matrixSize+x;
+			if(randomMatrix[pos]==2)break;
+			else if(randomMatrix[pos]==1) count++;
+		}
+		return count;
+	}
+	
+	private int getBoardConflicts(int[] randomMatrix, List<Integer> lizardpositions, List<Integer> tempNewConflictposition) {
+		int runningconflicts,conflicts;
+		runningconflicts=conflicts=0;
+		for(Integer lizardPosition:lizardpositions) {			
+			conflicts = getConlicts(randomMatrix,lizardPosition);
+			if(conflicts>0)tempNewConflictposition.add(lizardPosition);
+			runningconflicts+=conflicts;
+		}
+		return runningconflicts;
+	}
+	
+	
+	private int[] runSA() {
+		long currentTime = System.currentTimeMillis();
+		int conflicts,oldTotalConflicts,newTotalConflicts,conflictIndex, lizardCount, randomMatrix[];
+		double iteration,probability;
+		List<Integer> conflictingPos = new ArrayList<Integer>();
+		List<Integer> lizardposition = new ArrayList<Integer>();
+		List<Integer> tempNewConflictposition = new ArrayList<Integer>();
+		
+		
+		lizardCount=lizards;
+		randomMatrix = matrix.clone();
+		Integer oldPosition, newPosition;
+		iteration =1;
+		newTotalConflicts=0;
+		
+		//get board
+		while(lizardCount!=0) {
+			newPosition = (int)(Math.random()*(randomMatrix.length-1));
+			if(randomMatrix[newPosition]==0) {
+				randomMatrix[newPosition]=1;
+				lizardposition.add(newPosition);
+				lizardCount--;
+			}	
+		}
+		//======================================================
+		
+		//get conflicts first time
+		for(Integer position : lizardposition) {			
+			conflicts=getConlicts(randomMatrix,position);
+			if(conflicts>0) {
+				newTotalConflicts+=conflicts;
+				conflictingPos.add(position);	
+			}			
+		}
+		//getBoardConflicts		
+		oldTotalConflicts = newTotalConflicts;
+		
+		//loop till all conflict resolved
+		do {
+			if(System.currentTimeMillis()-currentTime > 280*1000)return null;
+			iteration++;	
+			conflictIndex =  (int)(Math.random()*(conflictingPos.size()));
+			oldPosition = conflictingPos.get(conflictIndex);
+			newPosition = (int)(Math.random()*(randomMatrix.length));
+			if(randomMatrix[newPosition.intValue()]!=0)
+				continue;
+			randomMatrix[oldPosition.intValue()]=0;
+			randomMatrix[newPosition.intValue()]=1;
+			lizardposition.remove(Integer.valueOf(oldPosition));
+			lizardposition.add(Integer.valueOf(newPosition));			
+			tempNewConflictposition.clear();
+			newTotalConflicts=getBoardConflicts(randomMatrix,lizardposition,tempNewConflictposition);//getConlicts(randomMatrix,newPosition);
+			if(newTotalConflicts-oldTotalConflicts>0) {
+				probability = Math.exp(((oldTotalConflicts-newTotalConflicts)*iteration)/100);
+				iteration = iteration>=5000?1:iteration;
+				if(probability<Math.random()) {
+					randomMatrix[oldPosition.intValue()]=1;
+					randomMatrix[newPosition.intValue()]=0;
+					lizardposition.remove(Integer.valueOf(newPosition));
+					lizardposition.add(Integer.valueOf(oldPosition));	
+					continue;
 				}
 			}
-		}	
-		return null;
-	}*/
-	
-	
-/*	private boolean isSafe(Set<Integer> lizardLoc, int index) {
-		//left side of position
-		if(matrix[index]==2)return false;
-		double row = (index/matrixSize)*matrixSize;	
-		for(int i = (int)index-1;row<=i;i--)
-			if(lizardLoc.contains(i))return false;
-			else if(matrix[i]==2)break;
-
-		//top of position
-		for(int i= (int)index-matrixSize;0<=i;i-=matrixSize)
-			if(lizardLoc.contains(i))return false;
-			else if(matrix[i]==2)break;
-
-		//left top of position
-		for(int x = (int)(index%matrixSize)-1, y=(int)(index/matrixSize)-1;0<=x && 0<=y;x--,y--)
-			if(lizardLoc.contains(x+y*matrixSize))return false;
-			else if(matrix[x+y*matrixSize]==2)break;
-
-		//right top of position
-		for(int x = (int)(index%matrixSize)+1, y=(int)(index/matrixSize)-1;x<matrixSize && 0<=y;x++,y--)
-			if(lizardLoc.contains(x+y*matrixSize))return false;
-			else if(matrix[x+y*matrixSize]==2)break;
-		
-		return true;
-	}*/
-
+			conflictingPos.clear();
+			conflictingPos = new ArrayList<Integer>(tempNewConflictposition);
+			oldTotalConflicts = newTotalConflicts;//getConlicts(randomMatrix,oldPosition);	
+		}while(!conflictingPos.isEmpty());
+		int[] result = new int[lizards];
+		for(int i=0;i<lizardposition.size();i++)result[i]=lizardposition.get(i);
+		return result;
+	}
 }
