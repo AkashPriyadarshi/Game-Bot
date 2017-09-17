@@ -5,11 +5,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -19,22 +17,22 @@ import java.util.Set;
 public class Homework {
 	class Node{
 		int lizardPlaced,index;
-		private Set<Integer> lizardLoc = null;
-		Node(Set<Integer> lizardLoc, int lizardPlaced, int index){
+		private int[] lizardLoc = null;
+		Node(int[] lizardLoc, int lizardPlaced, int index){
 			this.lizardPlaced=lizardPlaced;
 			this.index = index;
-			this.lizardLoc = new HashSet<Integer>(lizardLoc);
+			this.lizardLoc = lizardLoc.clone();
 		}
 	}
 	
 	Map<Integer,List<Integer>> treeLoc = new HashMap<Integer,List<Integer>>();
-	private final String inputfileName="input18.txt";
+	private final String inputfileName="input17.txt";
 	private final String outputfileName="output.txt";
 
 	private  String algoType;
 	private  int matrixSize, lizards, DFSlizardPlaced,matrix[],DFSMatrix[];
 	
-	private Set<Integer> result, DFSlizardLoc = new HashSet<Integer>();
+	private int result[],DFSlizardLoc[] = null;
 
 	public static void main(String[] args) throws Exception{
 		// TODO Auto-generated method stub
@@ -46,7 +44,7 @@ public class Homework {
 
 	private void init() throws Exception{
 		BufferedReader br = new BufferedReader(new FileReader(inputfileName));
-		Set<Integer> tempMatrix=null;
+		int[] tempMatrix=null;
 		List<Integer> tempList= null;
 		String temp=null;	
 		algoType  = br.readLine().trim();
@@ -66,18 +64,19 @@ public class Homework {
 			}
 		}
 		br.close();
+		DFSlizardLoc = new int[lizards];
 		DFSMatrix = matrix.clone();
 		tempMatrix=runDFS(0);
-		//tempMatrix=runBFS(new Node(new HashSet<Integer>(),0,0));
+		//tempMatrix=runBFS(new Node(new int[lizards],0,0));
 		writeFile(tempMatrix!=null, tempMatrix);
 	}
-	private void writeFile(boolean result, Set<Integer> lizardLoc) throws IOException {
+	private void writeFile(boolean result, int[] lizardLoc) throws IOException {
 		BufferedWriter bw = new BufferedWriter(new FileWriter(outputfileName));
 		if(!result)bw.write("FAIL");
 		else {
 			bw.write("OK");
-			Iterator<Integer> itr = lizardLoc.iterator();
-			while(itr.hasNext())matrix[itr.next()]=1;
+			for(int pos:lizardLoc)
+				matrix[pos]=1;			
 			
 			for(int i=0;i<matrix.length;i++) {
 				if(i%matrixSize==0)bw.newLine();
@@ -130,11 +129,12 @@ public class Homework {
 		return locUpdated;
 	}
 		
-	private Set<Integer> runDFS(int startIndex) {
+	private int[] runDFS(int startIndex) {
 		int[] locUpdated=null;		
 		for(int i = startIndex,index=0;i<matrix.length;i++) {
 			if(DFSMatrix[i]==0) {
-				DFSlizardLoc.add(new Integer(i));DFSlizardPlaced++;
+				DFSlizardLoc[DFSlizardPlaced]=i;
+				DFSlizardPlaced++;
 				if(DFSlizardPlaced== lizards) {
 					return DFSlizardLoc;
 				}
@@ -143,14 +143,13 @@ public class Homework {
 				result = runDFS(index);
 				for(int pos:locUpdated)DFSMatrix[pos]=0;
 				if(result!=null)return result;
-				DFSlizardPlaced--;
-				DFSlizardLoc.remove(i);
+				DFSlizardPlaced--;				
 			}
 		}
 		return null;
 	}
 	
-	private Set<Integer> runBFS(Node node) {
+	private int[] runBFS(Node node) {
 		int rowEnd,tempMatrix[]=null;
 		Queue<Node> queue = new LinkedList<Node>();
 		queue.add(node);
@@ -160,7 +159,7 @@ public class Homework {
 			for(Integer loc:node.lizardLoc)invalidPlaces(tempMatrix, loc.intValue());			
 			for(int i=node.index;i<matrix.length;i++) {
 				if(tempMatrix[i]==0) {
-					node.lizardLoc.add(i);
+					node.lizardLoc[node.lizardPlaced] =i;
 					if((node.lizardPlaced+1)== lizards) {
 						return node.lizardLoc;
 					}
@@ -171,8 +170,7 @@ public class Homework {
 						}
 					}
 					rowEnd = ((i/matrixSize)+1)*matrixSize;
-					queue.add(new Node(node.lizardLoc,node.lizardPlaced+1,rowEnd));
-					node.lizardLoc.remove(i);
+					queue.add(new Node(node.lizardLoc,node.lizardPlaced+1,rowEnd));					
 				}
 				
 			}
