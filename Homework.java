@@ -7,12 +7,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 
 public class Homework {
 	class Node{
@@ -24,14 +22,14 @@ public class Homework {
 			this.lizardLoc = lizardLoc.clone();
 		}
 	}
-	
+
 	Map<Integer,List<Integer>> treeLoc = new HashMap<Integer,List<Integer>>();
-	private final String inputfileName="input1.txt";
+	private final String inputfileName="input.txt";
 	private final String outputfileName="output.txt";
 
 	private  String algoType;
 	private  int matrixSize, lizards, DFSlizardPlaced,matrix[],DFSMatrix[];
-	
+
 	private int result[],DFSlizardLoc[] = null;
 
 	public static void main(String[] args) throws Exception{
@@ -82,19 +80,20 @@ public class Homework {
 			bw.write("OK");
 			for(int pos:lizardLoc)
 				matrix[pos]=1;			
-			
+
 			for(int i=0;i<matrix.length;i++) {
 				if(i%matrixSize==0)bw.newLine();
 
 				if(matrix[i]==-1) bw.write("0");
 				else bw.write(""+matrix[i]);
 			}
+			bw.newLine();
 		}
 		bw.flush();
 		bw.close();
 	}
 
-		private int[] invalidPlaces(int[] matrix, int index) {
+	private int[] invalidPlaces(int[] matrix, int index,boolean flag) {
 		int row, locUpdated[], count=0;
 		row = ((index/matrixSize)+1)*matrixSize;
 		locUpdated = new int[row-index+ 3*(matrixSize - (index/matrixSize))];
@@ -105,7 +104,7 @@ public class Homework {
 				matrix[j]=-1;
 				locUpdated[count++]=j;
 			}
-					
+
 		//vertical bottom
 		for(int j= (int)index+matrixSize;j<matrix.length;j+=matrixSize)
 			if(matrix[j]==2)break;
@@ -131,9 +130,11 @@ public class Homework {
 				locUpdated[count++]=pos;
 			}
 		}
+		if(flag)
+			for(int i = count;i<locUpdated.length;i++)locUpdated[count]=-1;
 		return locUpdated;
 	}
-		
+
 	private int[] runDFS(int startIndex) {
 		int[] locUpdated=null;		
 		for(int i = startIndex,index=0;i<matrix.length;i++) {
@@ -144,24 +145,28 @@ public class Homework {
 					return DFSlizardLoc;
 				}
 				index = treeLoc.containsKey(i/matrixSize)?i+1:((i/matrixSize)+1)*matrixSize;
-				locUpdated = invalidPlaces(DFSMatrix, i);
+				locUpdated = invalidPlaces(DFSMatrix, i,true);
 				result = runDFS(index);
-				for(int pos:locUpdated)DFSMatrix[pos]=0;
+				for(int pos:locUpdated) {
+					if(pos==-1)break;
+					else DFSMatrix[pos]=0;
+				}
 				if(result!=null)return result;
 				DFSlizardPlaced--;				
 			}
 		}
 		return null;
 	}
-	
+
 	private int[] runBFS(Node node) {
 		int rowEnd,tempMatrix[]=null;
 		Queue<Node> queue = new LinkedList<Node>();
-		queue.add(node);
+		queue.add(node);		
 		while(!queue.isEmpty()) {
 			node = queue.poll();
 			tempMatrix=matrix.clone();
-			for(Integer loc:node.lizardLoc)invalidPlaces(tempMatrix, loc.intValue());			
+			for(int i =0;i<node.lizardPlaced;i++)
+				invalidPlaces(tempMatrix, node.lizardLoc[i],false);
 			for(int i=node.index;i<matrix.length;i++) {
 				if(tempMatrix[i]==0) {
 					node.lizardLoc[node.lizardPlaced] =i;
@@ -177,14 +182,14 @@ public class Homework {
 					rowEnd = ((i/matrixSize)+1)*matrixSize;
 					queue.add(new Node(node.lizardLoc,node.lizardPlaced+1,rowEnd));					
 				}
-				
+
 			}
 		}
 		return null;
 	}
 
-	
-	
+
+
 	//=========================================Simulated Annealing=================================
 	private int getConlicts(int[] randomMatrix,int index) {
 		int rowend , rowStart,count=0;
@@ -194,45 +199,45 @@ public class Homework {
 		for(int j = (int)index+1;j<rowend;j++)
 			if(randomMatrix[j]==2)break;
 			else if(randomMatrix[j]==1) count++;
-		
+
 		//horizontal left
 		for(int j = (int)index-1;j>rowStart;j--)
 			if(randomMatrix[j]==2)break;
 			else if(randomMatrix[j]==1) count++;
-		
-		
+
+
 		//vertical bottom
 		for(int j= (int)index+matrixSize;j<matrix.length;j+=matrixSize)
 			if(randomMatrix[j]==2)break;
 			else if(randomMatrix[j]==1) count++;
-		
-		
+
+
 		//vertical up
 		for(int j= (int)index-matrixSize;0<=j;j-=matrixSize)
 			if(randomMatrix[j]==2)break;
 			else if(randomMatrix[j]==1) count++;
-		
+
 		//diagonal down right
 		for(int x = (int)(index%matrixSize)+1, y=(int)(index/matrixSize)+1,pos=0;x<matrixSize && y<matrixSize;x++,y++) {
 			pos=y*matrixSize+x;
 			if(randomMatrix[pos]==2)break;
 			else if(randomMatrix[pos]==1) count++;
 		}
-		
+
 		//diagonal up left
 		for(int x = (int)(index%matrixSize)-1, y=(int)(index/matrixSize)-1,pos=0;0<=x && 0<=y;x--,y--) {
 			pos=y*matrixSize+x;
 			if(randomMatrix[pos]==2)break;
 			else if(randomMatrix[pos]==1) count++;
 		}
-		
+
 		//diagonal up right
 		for(int x = (int)(index%matrixSize)+1, y=(int)(index/matrixSize)-1, pos=0;x<matrixSize && y>=0;x++,y--) {
 			pos = y*matrixSize+x;
 			if(randomMatrix[pos]==2)break;
 			else if(randomMatrix[pos]==1) count++;
 		}
-		
+
 		//diagonal down left
 		for(int x = (int)(index%matrixSize)-1, y=(int)(index/matrixSize)+1, pos=0;x>=0 && y<matrixSize;x--,y++) {
 			pos = y*matrixSize+x;
@@ -241,7 +246,7 @@ public class Homework {
 		}
 		return count;
 	}
-	
+
 	private int getBoardConflicts(int[] randomMatrix, List<Integer> lizardpositions, List<Integer> tempNewConflictposition) {
 		int runningconflicts,conflicts;
 		runningconflicts=conflicts=0;
@@ -252,8 +257,8 @@ public class Homework {
 		}
 		return runningconflicts;
 	}
-	
-	
+
+
 	private int[] runSA() {
 		long currentTime = System.currentTimeMillis();
 		int conflicts,oldTotalConflicts,newTotalConflicts,conflictIndex, lizardCount, randomMatrix[];
@@ -261,14 +266,14 @@ public class Homework {
 		List<Integer> conflictingPos = new ArrayList<Integer>();
 		List<Integer> lizardposition = new ArrayList<Integer>();
 		List<Integer> tempNewConflictposition = new ArrayList<Integer>();
-		
-		
+
+
 		lizardCount=lizards;
 		randomMatrix = matrix.clone();
 		Integer oldPosition, newPosition;
 		iteration =1;
 		newTotalConflicts=0;
-		
+
 		//get board
 		while(lizardCount!=0) {
 			newPosition = (int)(Math.random()*(randomMatrix.length-1));
@@ -276,10 +281,11 @@ public class Homework {
 				randomMatrix[newPosition]=1;
 				lizardposition.add(newPosition);
 				lizardCount--;
-			}	
+			}
+			if(System.currentTimeMillis()-currentTime > 265*1000)return null;
 		}
 		//======================================================
-		
+
 		//get conflicts first time
 		for(Integer position : lizardposition) {			
 			conflicts=getConlicts(randomMatrix,position);
@@ -290,10 +296,10 @@ public class Homework {
 		}
 		//getBoardConflicts		
 		oldTotalConflicts = newTotalConflicts;
-		
+
 		//loop till all conflict resolved
-		do {
-			if(System.currentTimeMillis()-currentTime > 280*1000)return null;
+		while(!conflictingPos.isEmpty()) {
+			if(System.currentTimeMillis()-currentTime > 260*1000)return null;
 			iteration++;	
 			conflictIndex =  (int)(Math.random()*(conflictingPos.size()));
 			oldPosition = conflictingPos.get(conflictIndex);
@@ -320,7 +326,8 @@ public class Homework {
 			conflictingPos.clear();
 			conflictingPos = new ArrayList<Integer>(tempNewConflictposition);
 			oldTotalConflicts = newTotalConflicts;//getConlicts(randomMatrix,oldPosition);	
-		}while(!conflictingPos.isEmpty());
+		}
+
 		int[] result = new int[lizards];
 		for(int i=0;i<lizardposition.size();i++)result[i]=lizardposition.get(i);
 		return result;
